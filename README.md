@@ -2,10 +2,10 @@
 
 A context-menu workflow extension for **Ableton Live 12 Suite** that automatically harvests arrangement track clips and batch-exports them as sequentially numbered audio slices.
 
-## ⚡ Download
+## Download
 [Download the latest .ablx Installer](https://github.com/nejben77/smart-batch-exporter/releases)
 
-## 🚀 Usage
+## Usage
 1. Open **Ableton Live 12**.
 2. Go to a track containing sliced or cut-up audio segments.
 3. **Right-click** any segment slice and select **Export to Folder**.
