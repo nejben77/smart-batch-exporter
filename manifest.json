@@ -1,0 +1,14 @@
+{
+    "name": "Smart Batch Exporter",
+    "author": "Ableton",
+    "entry": "dist/extension.js",
+    "version": "0.0.1",
+    "minimumApiVersion": "1.0.0",
+    "contextMenu": [
+        {
+            "id": "export-clips",
+            "label": "Export to Folder",
+            "targets": ["AudioClip"]
+        }
+    ]
+}

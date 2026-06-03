@@ -1,0 +1,1010 @@
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/extension.ts
+var extension_exports = {};
+__export(extension_exports, {
+  activate: () => activate
+});
+module.exports = __toCommonJS(extension_exports);
+
+// node_modules/@ableton-extensions/sdk/dist/index.mjs
+var DataModelObject = class DataModelObject2 {
+  /** @internal */
+  constructor(handle, dataModel, objectRegistry) {
+    this.handle = handle;
+    this.dataModel = dataModel;
+    this.objectRegistry = objectRegistry;
+  }
+  /** The canonical parent of this object in Live's object hierarchy, or `null` if it has none. */
+  get parent() {
+    const handle = this.dataModel.getObjectCanonicalParent(this.handle);
+    return handle ? this.objectRegistry.getObjectFromHandle(handle, DataModelObject2) : null;
+  }
+};
+var invokeAsync = (dataModel, fn, ...args) => new Promise((resolve, reject) => {
+  dataModel.withinTransaction(() => fn(...args, resolve, reject));
+});
+var createAsync = (dataModel, registry, type, fn, ...args) => new Promise((resolve, reject) => {
+  dataModel.withinTransaction(() => fn(...args, (handle) => resolve(registry.getObjectFromHandle(handle, type)), reject));
+});
+var Clip = class extends DataModelObject {
+  static className = "Clip";
+  get name() {
+    return this.dataModel.clipGetName(this.handle);
+  }
+  set name(name) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.clipSetName(this.handle, name);
+    });
+  }
+  get startTime() {
+    return this.dataModel.clipGetStartTime(this.handle);
+  }
+  get endTime() {
+    return this.dataModel.clipGetEndTime(this.handle);
+  }
+  get duration() {
+    return this.dataModel.clipGetEndTime(this.handle) - this.dataModel.clipGetStartTime(this.handle);
+  }
+  get startMarker() {
+    return this.dataModel.clipGetStartMarker(this.handle);
+  }
+  get endMarker() {
+    return this.dataModel.clipGetEndMarker(this.handle);
+  }
+  /**
+  * Whether the clip is looped. Enabling looping on an unwarped audio clip
+  * automatically enables warping.
+  */
+  get looping() {
+    return this.dataModel.clipGetLooping(this.handle);
+  }
+  set looping(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.clipSetLooping(this.handle, value);
+    });
+  }
+  get loopStart() {
+    return this.dataModel.clipGetLoopStart(this.handle);
+  }
+  get loopEnd() {
+    return this.dataModel.clipGetLoopEnd(this.handle);
+  }
+  get color() {
+    return this.dataModel.clipGetColor(this.handle);
+  }
+  set color(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.clipSetColor(this.handle, value);
+    });
+  }
+  get muted() {
+    return this.dataModel.clipGetMuted(this.handle);
+  }
+  set muted(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.clipSetMuted(this.handle, value);
+    });
+  }
+};
+var AudioClip = class extends Clip {
+  static className = "AudioClip";
+  get filePath() {
+    return this.dataModel.audioclipGetFilePath(this.handle);
+  }
+  get warping() {
+    return this.dataModel.audioclipGetWarping(this.handle);
+  }
+  set warping(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.audioclipSetWarping(this.handle, value);
+    });
+  }
+  get warpMode() {
+    return this.dataModel.audioclipGetWarpMode(this.handle);
+  }
+  set warpMode(warpMode) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.audioclipSetWarpMode(this.handle, warpMode);
+    });
+  }
+  get warpMarkers() {
+    return this.dataModel.audioclipGetWarpMarkers(this.handle);
+  }
+};
+var MidiClip = class extends Clip {
+  static className = "MidiClip";
+  get notes() {
+    return this.dataModel.midiclipGetNotes(this.handle);
+  }
+  set notes(notes) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.midiclipSetNotes(this.handle, notes);
+    });
+  }
+};
+var ClipSlot = class extends DataModelObject {
+  static className = "ClipSlot";
+  get clip() {
+    const handle = this.dataModel.clipslotGetClip(this.handle);
+    return handle ? this.objectRegistry.getObjectFromHandle(handle, Clip) : null;
+  }
+  /**
+  * Deletes the clip in this slot. Await the returned promise to ensure the
+  * deletion has been fully processed.
+  */
+  deleteClip() {
+    return invokeAsync(this.dataModel, this.dataModel.clipslotDeleteClip, this.handle);
+  }
+  /** @param length - Length of the clip in beats. */
+  createMidiClip(length) {
+    return createAsync(this.dataModel, this.objectRegistry, MidiClip, this.dataModel.clipslotCreateMidiClip, this.handle, length);
+  }
+  /**
+  * Creates an audio clip in this session slot.
+  *
+  * @param args.filePath - Absolute path to the audio file.
+  * @param args.isWarped - See {@link AudioTrack.createAudioClip}.
+  * @param args.loopSettings - See {@link AudioTrack.createAudioClip}.
+  */
+  createAudioClip(args) {
+    return createAsync(this.dataModel, this.objectRegistry, AudioClip, this.dataModel.clipslotCreateAudioClip, this.handle, {
+      filePath: args.filePath,
+      isWarped: args.isWarped,
+      loopSettings: args.loopSettings
+    });
+  }
+};
+var DeviceParameter = class extends DataModelObject {
+  static className = "DeviceParameter";
+  get name() {
+    return this.dataModel.deviceParameterGetName(this.handle);
+  }
+  get min() {
+    return this.dataModel.deviceParameterGetInternalMin(this.handle);
+  }
+  get max() {
+    return this.dataModel.deviceParameterGetInternalMax(this.handle);
+  }
+  get isQuantized() {
+    return this.dataModel.deviceParameterGetIsQuantized(this.handle);
+  }
+  get defaultValue() {
+    return this.dataModel.deviceParameterGetDefaultValue(this.handle);
+  }
+  get valueItems() {
+    return this.dataModel.deviceParameterGetValueItems(this.handle);
+  }
+  getValue() {
+    return new Promise((resolve) => {
+      this.dataModel.deviceParameterGetInternalValue(this.handle, resolve);
+    });
+  }
+  setValue(value) {
+    return new Promise((resolve, reject) => {
+      this.dataModel.withinTransaction(() => {
+        this.dataModel.deviceParameterSetInternalValue(this.handle, value, resolve, (error) => reject(new Error(error)));
+      });
+    });
+  }
+};
+var Device = class extends DataModelObject {
+  static className = "Device";
+  get name() {
+    return this.dataModel.deviceGetName(this.handle);
+  }
+  get parameters() {
+    return this.dataModel.deviceGetParameters(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, DeviceParameter));
+  }
+};
+var TakeLane = class extends DataModelObject {
+  static className = "TakeLane";
+  get clips() {
+    return this.dataModel.takelaneGetClips(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Clip));
+  }
+  get name() {
+    return this.dataModel.takelaneGetName(this.handle);
+  }
+  set name(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.takelaneSetName(this.handle, value);
+    });
+  }
+  /**
+  * @param startTime - Position in the arrangement in beats.
+  * @param duration - Length of the clip in beats.
+  */
+  createMidiClip(startTime, duration) {
+    return createAsync(this.dataModel, this.objectRegistry, MidiClip, this.dataModel.takelaneCreateMidiClip, this.handle, startTime, duration);
+  }
+  /**
+  * Creates an audio clip on this take lane. See {@link AudioTrack.createAudioClip}
+  * for argument semantics.
+  */
+  createAudioClip(args) {
+    return createAsync(this.dataModel, this.objectRegistry, AudioClip, this.dataModel.takelaneCreateAudioClip, this.handle, {
+      duration: args.duration,
+      filePath: args.filePath,
+      isWarped: args.isWarped,
+      loopSettings: args.loopSettings,
+      startTime: args.startTime
+    });
+  }
+};
+var TrackMixer = class extends DataModelObject {
+  static className = "MixerDevice";
+  get volume() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.mixerdeviceGetVolume(this.handle), DeviceParameter);
+  }
+  get panning() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.mixerdeviceGetPanning(this.handle), DeviceParameter);
+  }
+  get sends() {
+    return this.dataModel.mixerdeviceGetSends(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, DeviceParameter));
+  }
+};
+var Track = class Track2 extends DataModelObject {
+  static className = "Track";
+  get name() {
+    return this.dataModel.trackGetName(this.handle);
+  }
+  set name(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.trackSetName(this.handle, value);
+    });
+  }
+  get mute() {
+    return this.dataModel.trackGetMute(this.handle);
+  }
+  set mute(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.trackSetMute(this.handle, value);
+    });
+  }
+  get solo() {
+    return this.dataModel.trackGetSolo(this.handle);
+  }
+  set solo(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.trackSetSolo(this.handle, value);
+    });
+  }
+  get mutedViaSolo() {
+    return this.dataModel.trackGetMutedViaSolo(this.handle);
+  }
+  get arm() {
+    return this.dataModel.trackGetArm(this.handle);
+  }
+  set arm(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.trackSetArm(this.handle, value);
+    });
+  }
+  get clipSlots() {
+    return this.dataModel.trackGetClipSlots(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, ClipSlot));
+  }
+  get takeLanes() {
+    return this.dataModel.trackGetTakeLanes(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, TakeLane));
+  }
+  get arrangementClips() {
+    return this.dataModel.trackGetArrangementClips(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Clip));
+  }
+  get groupTrack() {
+    const handle = this.dataModel.trackGetGroupTrack(this.handle);
+    return handle ? this.objectRegistry.getObjectFromHandle(handle, Track2) : null;
+  }
+  get devices() {
+    return this.dataModel.trackGetDevices(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Device));
+  }
+  get mixer() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.trackGetMixerDevice(this.handle), TrackMixer);
+  }
+  /** Appended to the end of {@link takeLanes}. */
+  createTakeLane() {
+    return createAsync(this.dataModel, this.objectRegistry, TakeLane, this.dataModel.trackCreateTakeLane, this.handle);
+  }
+  /**
+  * Inserts a built-in Live device with its default preset into the track's device chain.
+  * Only devices native to Live are supported — third-party plug-ins cannot be loaded this way.
+  *
+  * @param deviceName - The name of the built-in Live device (e.g. `"Reverb"`, `"Auto Filter"`).
+  * @param index - Zero-based position in the device chain at which to insert.
+  */
+  insertDevice(deviceName, index) {
+    return createAsync(this.dataModel, this.objectRegistry, Device, this.dataModel.trackInsertDevice, this.handle, deviceName, BigInt(index));
+  }
+  /**
+  * Deletes a device from this track's device chain. Await the returned
+  * promise to ensure the deletion has been fully processed.
+  */
+  deleteDevice(device) {
+    return invokeAsync(this.dataModel, this.dataModel.trackDeleteDevice, this.handle, device.handle);
+  }
+  /** The duplicate is inserted directly after the original in the device chain. */
+  duplicateDevice(device) {
+    return createAsync(this.dataModel, this.objectRegistry, Device, this.dataModel.trackDuplicateDevice, this.handle, device.handle);
+  }
+  /**
+  * Deletes an arrangement clip. For session clips, use {@link ClipSlot.deleteClip}.
+  * Await the returned promise to ensure the deletion has been fully processed.
+  */
+  deleteClip(clip) {
+    return invokeAsync(this.dataModel, this.dataModel.trackDeleteClip, this.handle, clip.handle);
+  }
+  /**
+  * Deletes clips within the range. Clips that overlap a boundary are truncated
+  * to the range edge rather than fully deleted.
+  *
+  * @param startTime - Start of the range in beats.
+  * @param endTime - End of the range in beats.
+  */
+  clearClipsInRange(startTime, endTime) {
+    return invokeAsync(this.dataModel, this.dataModel.trackClearClipsInRange, this.handle, startTime, endTime);
+  }
+};
+var AudioTrack = class extends Track {
+  static className = "AudioTrack";
+  /**
+  * Creates an audio clip from a file in the track's arrangement timeline.
+  *
+  * @param args.filePath - Absolute path to the audio file.
+  * @param args.startTime - Position in the arrangement timeline in beats.
+  * @param args.duration - Length of the clip on the arrangement timeline,
+  *   in beats. Capped at the sample's natural length for non-looping clips;
+  *   looping clips repeat to fill the full length. Defaults to the sample's
+  *   natural length at the current tempo when omitted.
+  * @param args.isWarped - Whether warping is enabled. Defaults to the clip's
+  *   saved `.asd` settings if present, otherwise Live's "Auto-Warp" preference.
+  *   Must be provided when `loopSettings` is provided.
+  * @param args.loopSettings - Initial loop settings. Requires `isWarped` to be
+  *   defined. If `isWarped` is `false`, `loopSettings.looping` must be `false`.
+  *
+  * @example
+  * const clip = await track.createAudioClip({ filePath: '/samples/kick.wav', startTime: 0 });
+  *
+  * @example
+  * const clip = await track.createAudioClip({
+  *   filePath: '/samples/ambient.wav',
+  *   startTime: 16,
+  *   isWarped: false,
+  * });
+  *
+  * @example
+  * // Clip view: Start=beat 0, End=beat 2, Loop position=beat 0, Loop length=1 beat.
+  * const clip = await track.createAudioClip({
+  *   filePath: '/samples/loop.wav',
+  *   startTime: 0,
+  *   isWarped: true,
+  *   loopSettings: { looping: true, startMarker: 0, endMarker: 2, loopStart: 0, loopEnd: 1 },
+  * });
+  *
+  * @example
+  * const clip = await track.createAudioClip({
+  *   filePath: '/samples/loop.wav',
+  *   startTime: 0,
+  *   isWarped: true,
+  *   duration: 8,
+  *   loopSettings: { looping: true, startMarker: 0, endMarker: 2, loopStart: 0, loopEnd: 2 },
+  * });
+  */
+  createAudioClip(args) {
+    return createAsync(this.dataModel, this.objectRegistry, AudioClip, this.dataModel.trackCreateAudioClip, this.handle, {
+      duration: args.duration,
+      filePath: args.filePath,
+      isWarped: args.isWarped,
+      loopSettings: args.loopSettings,
+      startTime: args.startTime
+    });
+  }
+};
+var CuePoint = class extends DataModelObject {
+  static className = "CuePoint";
+  get time() {
+    return this.dataModel.cuePointGetTime(this.handle);
+  }
+  get name() {
+    return this.dataModel.cuePointGetName(this.handle);
+  }
+  set name(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.cuePointSetName(this.handle, value);
+    });
+  }
+};
+var MidiTrack = class extends Track {
+  static className = "MidiTrack";
+  /**
+  * @param startTime - Position in the arrangement in beats.
+  * @param duration - Length of the clip in beats.
+  */
+  createMidiClip(startTime, duration) {
+    return createAsync(this.dataModel, this.objectRegistry, MidiClip, this.dataModel.trackCreateMidiClip, this.handle, startTime, duration);
+  }
+};
+var Scene = class extends DataModelObject {
+  static className = "Scene";
+  get name() {
+    return this.dataModel.sceneGetName(this.handle);
+  }
+  set name(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.sceneSetName(this.handle, value);
+    });
+  }
+  get tempo() {
+    return this.dataModel.sceneGetTempo(this.handle);
+  }
+  get signatureNumerator() {
+    return this.dataModel.sceneGetSignatureNumerator(this.handle);
+  }
+  get signatureDenominator() {
+    return this.dataModel.sceneGetSignatureDenominator(this.handle);
+  }
+};
+var Song = class extends DataModelObject {
+  static className = "Song";
+  /** Regular tracks only — excludes return tracks and the main track. */
+  get tracks() {
+    return this.dataModel.songGetTracks(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Track));
+  }
+  get returnTracks() {
+    return this.dataModel.songGetReturnTracks(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Track));
+  }
+  get mainTrack() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.songGetMainTrack(this.handle), Track);
+  }
+  get scenes() {
+    return this.dataModel.songGetScenes(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Scene));
+  }
+  get cuePoints() {
+    return this.dataModel.songGetCuePoints(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, CuePoint));
+  }
+  get tempo() {
+    return this.dataModel.songGetTempo(this.handle);
+  }
+  set tempo(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.songSetTempo(this.handle, value);
+    });
+  }
+  /**
+  * The current arrangement grid quantization. Use with {@link gridIsTriplet} to
+  * determine the full grid setting.
+  */
+  get gridQuantization() {
+    return this.dataModel.songGetGridQuantization(this.handle);
+  }
+  /**
+  * Whether the arrangement grid uses triplet subdivisions of the current
+  * {@link gridQuantization} value.
+  */
+  get gridIsTriplet() {
+    return this.dataModel.songGetGridIsTriplet(this.handle);
+  }
+  /**
+  * The root note of the scale currently selected in Live, as a MIDI note number
+  * from 0 (C) to 11 (B).
+  */
+  get rootNote() {
+    return Number(this.dataModel.songGetRootNote(this.handle));
+  }
+  /** The name of the scale selected in Live, as shown in the Current Scale Name chooser. */
+  get scaleName() {
+    return this.dataModel.songGetScaleName(this.handle);
+  }
+  /** Whether Live's Scale Mode is enabled. */
+  get scaleMode() {
+    return this.dataModel.songGetScaleMode(this.handle);
+  }
+  /** The intervals of the current scale as semitone offsets from the root note. */
+  get scaleIntervals() {
+    return this.dataModel.songGetScaleIntervals(this.handle).map(Number);
+  }
+  /** Inserted after the last selected track, or appended if no track is selected. */
+  createAudioTrack() {
+    return createAsync(this.dataModel, this.objectRegistry, AudioTrack, this.dataModel.songCreateAudioTrack, this.handle);
+  }
+  /** Inserted after the last selected track, or appended if no track is selected. */
+  createMidiTrack() {
+    return createAsync(this.dataModel, this.objectRegistry, MidiTrack, this.dataModel.songCreateMidiTrack, this.handle);
+  }
+  /**
+  * @param index - 0-based insert position in the range `[0, song.scenes.length]`.
+  * Pass `-1` to append at the end.
+  */
+  createScene(index) {
+    return createAsync(this.dataModel, this.objectRegistry, Scene, this.dataModel.songCreateScene, this.handle, BigInt(index));
+  }
+  /**
+  * Deletes a track from the song. Await the returned promise to ensure the
+  * deletion has been fully processed.
+  */
+  deleteTrack(track) {
+    return invokeAsync(this.dataModel, this.dataModel.songDeleteTrack, this.handle, track.handle);
+  }
+  /**
+  * Deletes a scene from the song. Await the returned promise to ensure the
+  * deletion has been fully processed.
+  */
+  deleteScene(scene) {
+    return invokeAsync(this.dataModel, this.dataModel.songDeleteScene, this.handle, scene.handle);
+  }
+  /** Duplicates the track. The duplicate is inserted immediately after the original. */
+  duplicateTrack(track) {
+    return createAsync(this.dataModel, this.objectRegistry, Track, this.dataModel.songDuplicateTrack, this.handle, track.handle);
+  }
+  /** Duplicates the scene. The duplicate is inserted immediately after the original. */
+  duplicateScene(scene) {
+    return createAsync(this.dataModel, this.objectRegistry, Scene, this.dataModel.songDuplicateScene, this.handle, scene.handle);
+  }
+  /** @param time - Position in the arrangement in beats. */
+  createCuePoint(time) {
+    return createAsync(this.dataModel, this.objectRegistry, CuePoint, this.dataModel.songCreateCuePoint, this.handle, time);
+  }
+  /**
+  * Deletes a cue point from the song. Await the returned promise to ensure
+  * the deletion has been fully processed.
+  */
+  deleteCuePoint(cuePoint) {
+    return invokeAsync(this.dataModel, this.dataModel.songDeleteCuePoint, this.handle, cuePoint.handle);
+  }
+};
+var Application = class extends DataModelObject {
+  static className = "Application";
+  get song() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.rootGetSong(this.handle), Song);
+  }
+};
+var Commands = class {
+  module;
+  /** @internal */
+  constructor(module2) {
+    this.module = module2;
+  }
+  /**
+  * Registers a command that can be invoked by Live or via {@link Commands.executeCommand}.
+  *
+  * @param commandId - A unique string identifier for this command.
+  * @param callback - Called when the command is invoked. May receive arguments passed by the invoker.
+  */
+  registerCommand(commandId, callback) {
+    this.module.registerCommand(commandId, callback);
+  }
+  /**
+  * Programmatically invokes a registered command.
+  *
+  * @param commandId - The ID of the command to invoke.
+  * @param args - Arguments to pass to the command's callback.
+  */
+  executeCommand(commandId, ...args) {
+    this.module.executeCommand(commandId, ...args);
+  }
+};
+var ChainMixer = class extends DataModelObject {
+  static className = "ChainMixerDevice";
+  get volume() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.chainmixerdeviceGetVolume(this.handle), DeviceParameter);
+  }
+  get panning() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.chainmixerdeviceGetPanning(this.handle), DeviceParameter);
+  }
+  get sends() {
+    return this.dataModel.chainmixerdeviceGetSends(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, DeviceParameter));
+  }
+};
+var Chain = class extends DataModelObject {
+  static className = "Chain";
+  get devices() {
+    return this.dataModel.chainGetDevices(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Device));
+  }
+  get mixer() {
+    return this.objectRegistry.getObjectFromHandle(this.dataModel.chainGetMixerDevice(this.handle), ChainMixer);
+  }
+  /**
+  * Inserts a built-in Live device with its default preset into the chain.
+  * Only devices native to Live are supported — third-party plug-ins cannot be loaded this way.
+  *
+  * @param deviceName - The name of the built-in Live device (e.g. `"Reverb"`, `"Auto Filter"`).
+  * @param index - Zero-based position in the device chain at which to insert.
+  */
+  insertDevice(deviceName, index) {
+    return createAsync(this.dataModel, this.objectRegistry, Device, this.dataModel.chainInsertDevice, this.handle, deviceName, BigInt(index));
+  }
+  /**
+  * Deletes a device from this chain. Await the returned promise to ensure
+  * the deletion has been fully processed.
+  */
+  deleteDevice(device) {
+    return invokeAsync(this.dataModel, this.dataModel.chainDeleteDevice, this.handle, device.handle);
+  }
+  /** The duplicate is inserted directly after the original in the device chain. */
+  duplicateDevice(device) {
+    return createAsync(this.dataModel, this.objectRegistry, Device, this.dataModel.chainDuplicateDevice, this.handle, device.handle);
+  }
+};
+var DrumChain = class extends Chain {
+  static className = "DrumChain";
+  get receivingNote() {
+    return Number(this.dataModel.drumchainGetReceivingNote(this.handle));
+  }
+  set receivingNote(value) {
+    this.dataModel.withinTransaction(() => {
+      this.dataModel.drumchainSetReceivingNote(this.handle, BigInt(value));
+    });
+  }
+};
+var RackDevice = class extends Device {
+  static className = "RackDevice";
+  get chains() {
+    return this.dataModel.rackdeviceGetChains(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, Chain));
+  }
+  /** @param index - 0-based insert position in the range `[0, rack.chains.length]`. */
+  insertChain(index) {
+    return createAsync(this.dataModel, this.objectRegistry, Chain, this.dataModel.rackdeviceInsertChain, this.handle, BigInt(index));
+  }
+};
+var DrumRack = class extends RackDevice {
+  static className = "DrumRackDevice";
+  get chains() {
+    return this.dataModel.rackdeviceGetChains(this.handle).map((handle) => this.objectRegistry.getObjectFromHandle(handle, DrumChain));
+  }
+};
+var Sample = class extends DataModelObject {
+  static className = "Sample";
+  get filePath() {
+    return this.dataModel.sampleGetFilePath(this.handle);
+  }
+};
+var Simpler = class extends Device {
+  static className = "Simpler";
+  get sample() {
+    const handle = this.dataModel.simplerGetSample(this.handle);
+    return handle ? this.objectRegistry.getObjectFromHandle(handle, Sample) : null;
+  }
+  /** Replaces the loaded sample with the audio file at the given absolute path. */
+  replaceSample(filePath) {
+    return createAsync(this.dataModel, this.objectRegistry, Sample, this.dataModel.simplerReplaceSample, this.handle, filePath);
+  }
+};
+var dataModelClasses = [
+  Application,
+  Song,
+  AudioTrack,
+  MidiTrack,
+  Track,
+  AudioClip,
+  MidiClip,
+  Clip,
+  ClipSlot,
+  TakeLane,
+  Simpler,
+  DrumRack,
+  RackDevice,
+  Device,
+  Sample,
+  DrumChain,
+  Chain,
+  Scene,
+  CuePoint,
+  DeviceParameter,
+  TrackMixer,
+  ChainMixer
+];
+var DataModelObjectRegistry = class {
+  cache = /* @__PURE__ */ new Map();
+  dataModel;
+  /** @internal */
+  constructor(dataModel) {
+    this.dataModel = dataModel;
+  }
+  getOrCreateObjectFromHandle(handle) {
+    const cached = this.cache.get(handle.id);
+    if (cached) return cached;
+    const ModelClass = dataModelClasses.find((cls) => this.dataModel.getObjectIsOfClass(handle, cls.className));
+    if (!ModelClass) throw new Error("Unknown object type");
+    const obj = new ModelClass(handle, this.dataModel, this);
+    this.cache.set(handle.id, obj);
+    return obj;
+  }
+  /**
+  * Resolves a {@link Handle} into a typed SDK object.
+  *
+  * Pass {@link DataModelObject} as `type` when the exact type of the handle is not known
+  * in advance, then use `instanceof` to branch on the actual type:
+  *
+  * ```ts
+  * const obj = objects.getObjectFromHandle(handle, DataModelObject);
+  * if (obj instanceof ClipSlot) {
+  *   // ...
+  * }
+  * ```
+  *
+  * Throws if the underlying object has been deleted, if it is of a different
+  * type than `type`, or if its type is not recognised.
+  *
+  * @param handle - The handle to resolve.
+  * @param type - The expected SDK class (e.g. `ClipSlot`).
+  */
+  getObjectFromHandle(handle, type) {
+    const obj = this.getOrCreateObjectFromHandle(handle);
+    if (!(obj instanceof type)) throw new Error("Object of incorrect type");
+    return obj;
+  }
+};
+var Environment = class {
+  module;
+  /** @internal */
+  constructor(module2) {
+    this.module = module2;
+  }
+  /**
+  * Per-extension directory for persistent storage. Use it for configuration, credentials,
+  * and cached state — anything that should survive across Live sessions.
+  */
+  get storageDirectory() {
+    return this.module.storageDirectory;
+  }
+  /**
+  * Per-extension directory for temporary files, such as intermediate audio or analysis
+  * results. May be cleaned up between sessions.
+  */
+  get tempDirectory() {
+    return this.module.tempDirectory;
+  }
+  /** Live's current UI language as an uppercase ISO 639-1 code (e.g. `"EN"`, `"DE"`, `"JA"`). */
+  get language() {
+    return this.module.language;
+  }
+};
+var Resources = class {
+  module;
+  /** @internal */
+  constructor(module2) {
+    this.module = module2;
+  }
+  /**
+  * Renders the pre-effects audio of a track in the arrangement between two beat
+  * positions. Returns a path to a WAV file written to the extension's temp directory.
+  */
+  renderPreFxAudio(track, startTime, endTime) {
+    return new Promise((resolve, reject) => {
+      this.module.renderPreFxAudio(track.handle, {
+        endTime,
+        startTime
+      }, resolve, reject);
+    });
+  }
+  /**
+  * Copies a file into the Live project folder so that Live manages it.
+  * Returns the path to the imported copy. Use the returned path in subsequent API
+  * calls, not the original.
+  */
+  importIntoProject(filePath) {
+    return new Promise((resolve, reject) => {
+      this.module.importIntoProject(filePath, resolve, reject);
+    });
+  }
+};
+var toProgressOptions = (text, progress) => typeof progress === "number" ? {
+  progress,
+  text
+} : { text };
+var Ui = class {
+  module;
+  /** @internal */
+  constructor(module2) {
+    this.module = module2;
+  }
+  /**
+  * Registers a context menu action in the given {@link ContextMenuScope}.
+  *
+  * When the user triggers the action, Live invokes the command identified by
+  * `commandId`. Depending on the scope, the command receives either the triggered
+  * object's {@link Handle}, an {@link ArrangementSelection}, or a
+  * {@link ClipSlotSelection} as its first argument.
+  *
+  * Returns a function that unregisters the action when called.
+  */
+  registerContextMenuAction(scope, title, commandId) {
+    return new Promise((resolve) => {
+      this.module.registerContextMenuAction(scope, title, commandId, (unregister) => {
+        resolve(() => new Promise((done) => {
+          unregister(done);
+        }));
+      });
+    });
+  }
+  /**
+  * Opens a modal dialog that loads the given URL. Supported URL schemes are
+  * `file:`, `data:`, `https:`, and `http://localhost`.
+  *
+  * To return a result and close the dialog, the dialog's HTML must post the message
+  * `{ method: "close_and_send", params: [resultString] }` to the host's message
+  * handler — `window.webkit.messageHandlers.live.postMessage` on macOS or
+  * `window.chrome.webview.postMessage` on Windows. The returned promise resolves
+  * with that string.
+  *
+  * Rejects if `url` is malformed or an unexpected error occurred.
+  */
+  showModalDialog(url, width, height) {
+    return new Promise((resolve, reject) => {
+      this.module.showModalDialog(url, width, height, resolve, reject);
+    });
+  }
+  /**
+  * Shows a progress dialog while `callback` runs.
+  * The callback receives an `update` function to change the text/progress
+  * (progress is a percentage, 0–100), and an `AbortSignal` that fires if
+  * the user cancels the dialog.
+  * The dialog closes automatically when the callback resolves or rejects.
+  *
+  * @example
+  * ```ts
+  * const wavPath = await ui.withinProgressDialog(
+  *   "Rendering audio…",
+  *   { progress: 0 },
+  *   async (update, signal) => {
+  *     await update("Analysing…", 30);
+  *     if (signal.aborted) return;
+  *     await update("Rendering…", 70);
+  *     return await resources.renderPreFxAudio(track, startBeat, endBeat);
+  *   },
+  * );
+  * ```
+  */
+  withinProgressDialog(text, options, callback) {
+    const ac = new AbortController();
+    return new Promise((resolve, reject) => {
+      this.module.showProgressDialog(toProgressOptions(text, options.progress), ({ update, close }) => {
+        const asyncUpdate = (updateText, progress) => new Promise((resolveUpdate) => {
+          update(toProgressOptions(updateText, progress), resolveUpdate);
+        });
+        const asyncClose = () => new Promise((done) => {
+          close(done);
+        });
+        callback(asyncUpdate, ac.signal).finally(asyncClose).then(resolve).catch(reject);
+      }, () => {
+        ac.abort();
+      });
+    });
+  }
+};
+var initialize = (context, apiVersion) => {
+  const { commands, dataModel, environment, resources, ui } = context.initializeExtensionHost({ apiVersion });
+  const objectRegistry = new DataModelObjectRegistry(dataModel);
+  return {
+    application: objectRegistry.getObjectFromHandle(dataModel.getRoot(), Application),
+    commands: new Commands(commands),
+    environment: new Environment(environment),
+    getObjectFromHandle: objectRegistry.getObjectFromHandle.bind(objectRegistry),
+    resources: new Resources(resources),
+    ui: new Ui(ui),
+    withinTransaction: dataModel.withinTransaction.bind(dataModel)
+  };
+};
+
+// src/extension.ts
+var fs = __toESM(require("fs"), 1);
+var path = __toESM(require("path"), 1);
+function activate(context) {
+  const api = initialize(context, "1.0.0");
+  api.commands.registerCommand("smartBatchExportAction", async (...args) => {
+    console.log("=== Smart Batch Exporter: Generating Audio Files ===");
+    const target = args[0];
+    if (!target || !target.id) return;
+    const outputFolder = "/Users/nejmbenessaiah/Downloads/Smart_Batch_Exports";
+    try {
+      const dm = api.application.dataModel;
+      if (!fs.existsSync(outputFolder)) {
+        fs.mkdirSync(outputFolder, { recursive: true });
+      }
+      const rootHandle = await dm.getRoot();
+      const songHandle = await dm.rootGetSong(rootHandle);
+      const tempo = await dm.songGetTempo(songHandle);
+      console.log(`Current Project Tempo captured: ${tempo} BPM`);
+      const trackHandle = await dm.getObjectCanonicalParent(target);
+      const trackClips = await dm.trackGetArrangementClips(trackHandle);
+      console.log(`Processing ${trackClips.length} slices...`);
+      for (let i = 0; i < trackClips.length; i++) {
+        const clipHandle = typeof trackClips[i] === "bigint" ? { id: trackClips[i] } : trackClips[i];
+        const clipName = await dm.clipGetName(clipHandle);
+        const startTimeBeats = await dm.clipGetStartTime(clipHandle);
+        const endTimeBeats = await dm.clipGetEndTime(clipHandle);
+        const sourcePath = await dm.audioclipGetFilePath(clipHandle);
+        if (!sourcePath || !fs.existsSync(sourcePath)) {
+          console.log(`Skipping slice ${i + 1}: Source file not readable.`);
+          continue;
+        }
+        const startSec = startTimeBeats / tempo * 60;
+        const endSec = endTimeBeats / tempo * 60;
+        const baseName = clipName ? clipName.replace(/[\/\\?%*:|"<>]/g, "-") : "Slice";
+        const paddedIndex = String(i + 1).padStart(2, "0");
+        const targetFileName = `${baseName}_${paddedIndex}.wav`;
+        const destinationPath = path.join(outputFolder, targetFileName);
+        sliceWavFile(sourcePath, destinationPath, startSec, endSec);
+        console.log(`Exported: ${targetFileName}`);
+      }
+      console.log(`
+=== SUCCESS! All slices saved cleanly to: ${outputFolder} ===`);
+    } catch (error) {
+      console.error("Export generation script encountered an error:", error);
+    }
+  });
+  api.ui.registerContextMenuAction("AudioClip", "Export to Folder", "smartBatchExportAction");
+}
+function sliceWavFile(sourcePath, targetPath, startSec, endSec) {
+  const chunkBuffer = Buffer.alloc(2048);
+  const fd = fs.openSync(sourcePath, "r");
+  fs.readSync(fd, chunkBuffer, 0, 2048, 0);
+  const fmtIndex = chunkBuffer.indexOf("fmt ");
+  const dataIndex = chunkBuffer.indexOf("data");
+  if (fmtIndex === -1 || dataIndex === -1) {
+    fs.closeSync(fd);
+    throw new Error("Unsupported or corrupted WAV file layout structure.");
+  }
+  const numChannels = chunkBuffer.readUInt16LE(fmtIndex + 10);
+  const sampleRate = chunkBuffer.readUInt32LE(fmtIndex + 12);
+  const byteRate = chunkBuffer.readUInt32LE(fmtIndex + 16);
+  const blockAlign = chunkBuffer.readUInt16LE(fmtIndex + 20);
+  const bitsPerSample = chunkBuffer.readUInt16LE(fmtIndex + 22);
+  const dataStartOffset = dataIndex + 8;
+  const startByte = dataStartOffset + Math.floor(startSec * byteRate);
+  const endByte = dataStartOffset + Math.floor(endSec * byteRate);
+  let durationBytes = endByte - startByte;
+  durationBytes = Math.floor(durationBytes / blockAlign) * blockAlign;
+  if (durationBytes <= 0) durationBytes = blockAlign;
+  const newHeader = Buffer.alloc(44);
+  newHeader.write("RIFF", 0);
+  newHeader.writeUInt32LE(durationBytes + 36, 4);
+  newHeader.write("WAVE", 8);
+  newHeader.write("fmt ", 12);
+  newHeader.writeUInt32LE(16, 16);
+  newHeader.writeUInt16LE(1, 20);
+  newHeader.writeUInt16LE(numChannels, 22);
+  newHeader.writeUInt32LE(sampleRate, 24);
+  newHeader.writeUInt32LE(byteRate, 28);
+  newHeader.writeUInt16LE(blockAlign, 32);
+  newHeader.writeUInt16LE(bitsPerSample, 34);
+  newHeader.write("data", 36);
+  newHeader.writeUInt32LE(durationBytes, 40);
+  const writeStream = fs.createWriteStream(targetPath);
+  writeStream.write(newHeader);
+  const readStream = fs.createReadStream(sourcePath, {
+    start: startByte,
+    end: startByte + durationBytes - 1
+  });
+  readStream.pipe(writeStream);
+  fs.closeSync(fd);
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  activate
+});
+//# sourceMappingURL=extension.js.map
