@@ -969,6 +969,7 @@ function sliceWavFile(sourcePath, targetPath, startSec, endSec) {
     fs.closeSync(fd);
     throw new Error("Unsupported or corrupted WAV file layout structure.");
   }
+  const audioFormat = chunkBuffer.readUInt16LE(fmtIndex + 8);
   const numChannels = chunkBuffer.readUInt16LE(fmtIndex + 10);
   const sampleRate = chunkBuffer.readUInt32LE(fmtIndex + 12);
   const byteRate = chunkBuffer.readUInt32LE(fmtIndex + 16);
@@ -986,7 +987,7 @@ function sliceWavFile(sourcePath, targetPath, startSec, endSec) {
   newHeader.write("WAVE", 8);
   newHeader.write("fmt ", 12);
   newHeader.writeUInt32LE(16, 16);
-  newHeader.writeUInt16LE(1, 20);
+  newHeader.writeUInt16LE(audioFormat, 20);
   newHeader.writeUInt16LE(numChannels, 22);
   newHeader.writeUInt32LE(sampleRate, 24);
   newHeader.writeUInt32LE(byteRate, 28);
