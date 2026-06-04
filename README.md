@@ -1,16 +1,21 @@
 # Smart Batch Exporter
 
-A context-menu workflow extension for **Ableton Live 12 Suite** that automatically harvests arrangement track clips and batch-exports them as sequentially numbered audio slices.
+A context-menu workflow extension for Ableton Live 12 (Beta) that renders every clip on an arrangement audio track and imports them into your project as individual audio files.
 
 ## Download
-[Download the latest .ablx Installer](https://github.com/nejben77/smart-batch-exporter/releases)
+[Download the latest .ablx installer](https://github.com/nejben77/smart-batch-exporter/releases)
+
+## Requirements
+- Ableton Live 12 Beta (the build that includes the Extensions feature)
+- Install via Settings > Extensions with Developer Mode off
 
 ## Usage
-1. Open **Ableton Live 12**.
-2. Go to a track containing sliced or cut-up audio segments.
-3. **Right-click** any segment slice and select **Export to Folder**.
-4. Open your Mac's **Downloads** folder to find your newly created `Smart_Batch_Exports` folder packed with perfectly trimmed, sequentially numbered audio loops (`_01`, `_02`, `_03`, etc.).
+1. Open your Set and save it first, so the project folder exists.
+2. Go to an audio track in the Arrangement holding your sliced or cut-up segments.
+3. Right-click any clip and choose **Export to Folder**.
+4. The rendered clips are imported into your project's `Samples/Imported` folder. To open that location, right-click any imported clip and choose Show in Finder.
 
-## Roadmap
-- [x] **Auto-Match Bit Depth:** Dynamically read source files to export native 24-bit and 32-bit audio streams automatically.
-- [ ] **AIFF Container Support:** Add dynamic header translation to export Apple `.aif` containers alongside standard `.wav` structures.
+## Planned
+- Sequential naming (`_01`, `_02`, `_03`) for exported slices.
+- Auto-match bit depth, reading source files to export native 24-bit and 32-bit streams.
+- AIFF (`.aif`) container support alongside WAV.
