@@ -18,7 +18,7 @@ Save your Set first. The exported clips are written into the project folder, whi
 3. Right-click any clip and choose **Export to Folder**.
 
 ## Finding your files
-The rendered clips are imported into your project's `Samples/Imported` folder. To get there quickly, right-click any of the imported clips inside Live and use the option to show or manage its sample file, which opens that folder in Finder.
+The rendered clips are imported into your project. In Live's browser, open **Places > Current Project** and go to `Samples/Imported` to preview and drag them anywhere. To reach the files on disk instead, right-click any imported clip and use the option to show or manage its sample file, which opens the folder in Finder.
 
 ## Planned
 - Sequential naming (`_01`, `_02`, `_03`) for exported slices.
