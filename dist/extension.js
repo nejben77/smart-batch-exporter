@@ -1,9 +1,7 @@
 "use strict";
-var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -17,14 +15,6 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/extension.ts
@@ -726,9 +716,11 @@ var DataModelObjectRegistry = class {
   }
   getOrCreateObjectFromHandle(handle) {
     const cached = this.cache.get(handle.id);
-    if (cached) return cached;
+    if (cached)
+      return cached;
     const ModelClass = dataModelClasses.find((cls) => this.dataModel.getObjectIsOfClass(handle, cls.className));
-    if (!ModelClass) throw new Error("Unknown object type");
+    if (!ModelClass)
+      throw new Error("Unknown object type");
     const obj = new ModelClass(handle, this.dataModel, this);
     this.cache.set(handle.id, obj);
     return obj;
@@ -754,7 +746,8 @@ var DataModelObjectRegistry = class {
   */
   getObjectFromHandle(handle, type) {
     const obj = this.getOrCreateObjectFromHandle(handle);
-    if (!(obj instanceof type)) throw new Error("Object of incorrect type");
+    if (!(obj instanceof type))
+      throw new Error("Object of incorrect type");
     return obj;
   }
 };
@@ -911,98 +904,52 @@ var initialize = (context, apiVersion) => {
 };
 
 // src/extension.ts
-var fs = __toESM(require("fs"), 1);
-var path = __toESM(require("path"), 1);
 function activate(context) {
   const api = initialize(context, "1.0.0");
-  api.commands.registerCommand("smartBatchExportAction", async (...args) => {
-    console.log("=== Smart Batch Exporter: Generating Audio Files ===");
-    const target = args[0];
-    if (!target || !target.id) return;
-    const outputFolder = "/Users/nejmbenessaiah/Downloads/Smart_Batch_Exports";
-    try {
-      const dm = api.application.dataModel;
-      if (!fs.existsSync(outputFolder)) {
-        fs.mkdirSync(outputFolder, { recursive: true });
-      }
-      const rootHandle = await dm.getRoot();
-      const songHandle = await dm.rootGetSong(rootHandle);
-      const tempo = await dm.songGetTempo(songHandle);
-      console.log(`Current Project Tempo captured: ${tempo} BPM`);
-      const trackHandle = await dm.getObjectCanonicalParent(target);
-      const trackClips = await dm.trackGetArrangementClips(trackHandle);
-      console.log(`Processing ${trackClips.length} slices...`);
-      for (let i = 0; i < trackClips.length; i++) {
-        const clipHandle = typeof trackClips[i] === "bigint" ? { id: trackClips[i] } : trackClips[i];
-        const clipName = await dm.clipGetName(clipHandle);
-        const startTimeBeats = await dm.clipGetStartTime(clipHandle);
-        const endTimeBeats = await dm.clipGetEndTime(clipHandle);
-        const sourcePath = await dm.audioclipGetFilePath(clipHandle);
-        if (!sourcePath || !fs.existsSync(sourcePath)) {
-          console.log(`Skipping slice ${i + 1}: Source file not readable.`);
-          continue;
-        }
-        const startSec = startTimeBeats / tempo * 60;
-        const endSec = endTimeBeats / tempo * 60;
-        const baseName = clipName ? clipName.replace(/[\/\\?%*:|"<>]/g, "-") : "Slice";
-        const paddedIndex = String(i + 1).padStart(2, "0");
-        const targetFileName = `${baseName}_${paddedIndex}.wav`;
-        const destinationPath = path.join(outputFolder, targetFileName);
-        sliceWavFile(sourcePath, destinationPath, startSec, endSec);
-        console.log(`Exported: ${targetFileName}`);
-      }
-      console.log(`
-=== SUCCESS! All slices saved cleanly to: ${outputFolder} ===`);
-    } catch (error) {
-      console.error("Export generation script encountered an error:", error);
+  api.commands.registerCommand("smartBatchExportAction", async (target) => {
+    if (!target || typeof target.time_selection_start !== "number" || !target.selected_lanes || target.selected_lanes.length === 0) {
+      return;
     }
+    let track;
+    try {
+      track = api.getObjectFromHandle(target.selected_lanes[0], AudioTrack);
+    } catch (error) {
+      console.error("Selection is not on a valid Audio Track.");
+      return;
+    }
+    const selStart = target.time_selection_start;
+    const selEnd = target.time_selection_end;
+    const allClips = track.arrangementClips;
+    const targetClips = allClips.filter((clip) => {
+      return clip.startTime < selEnd && clip.endTime > selStart;
+    });
+    if (targetClips.length === 0)
+      return;
+    await api.ui.withinProgressDialog(
+      "Rendering Selected Clips...",
+      { progress: 0 },
+      async (update) => {
+        for (let i = 0; i < targetClips.length; i++) {
+          const clip = targetClips[i];
+          if (!clip)
+            continue;
+          const percent = Math.floor(i / targetClips.length * 100);
+          await update(`Rendering clip ${i + 1} of ${targetClips.length}...`, percent);
+          const renderedPath = await api.resources.renderPreFxAudio(
+            track,
+            clip.startTime,
+            clip.endTime
+          );
+          await api.resources.importIntoProject(renderedPath);
+        }
+      }
+    );
   });
-  api.ui.registerContextMenuAction("AudioClip", "Export to Folder", "smartBatchExportAction");
-}
-function sliceWavFile(sourcePath, targetPath, startSec, endSec) {
-  const chunkBuffer = Buffer.alloc(2048);
-  const fd = fs.openSync(sourcePath, "r");
-  fs.readSync(fd, chunkBuffer, 0, 2048, 0);
-  const fmtIndex = chunkBuffer.indexOf("fmt ");
-  const dataIndex = chunkBuffer.indexOf("data");
-  if (fmtIndex === -1 || dataIndex === -1) {
-    fs.closeSync(fd);
-    throw new Error("Unsupported or corrupted WAV file layout structure.");
-  }
-  const audioFormat = chunkBuffer.readUInt16LE(fmtIndex + 8);
-  const numChannels = chunkBuffer.readUInt16LE(fmtIndex + 10);
-  const sampleRate = chunkBuffer.readUInt32LE(fmtIndex + 12);
-  const byteRate = chunkBuffer.readUInt32LE(fmtIndex + 16);
-  const blockAlign = chunkBuffer.readUInt16LE(fmtIndex + 20);
-  const bitsPerSample = chunkBuffer.readUInt16LE(fmtIndex + 22);
-  const dataStartOffset = dataIndex + 8;
-  const startByte = dataStartOffset + Math.floor(startSec * byteRate);
-  const endByte = dataStartOffset + Math.floor(endSec * byteRate);
-  let durationBytes = endByte - startByte;
-  durationBytes = Math.floor(durationBytes / blockAlign) * blockAlign;
-  if (durationBytes <= 0) durationBytes = blockAlign;
-  const newHeader = Buffer.alloc(44);
-  newHeader.write("RIFF", 0);
-  newHeader.writeUInt32LE(durationBytes + 36, 4);
-  newHeader.write("WAVE", 8);
-  newHeader.write("fmt ", 12);
-  newHeader.writeUInt32LE(16, 16);
-  newHeader.writeUInt16LE(audioFormat, 20);
-  newHeader.writeUInt16LE(numChannels, 22);
-  newHeader.writeUInt32LE(sampleRate, 24);
-  newHeader.writeUInt32LE(byteRate, 28);
-  newHeader.writeUInt16LE(blockAlign, 32);
-  newHeader.writeUInt16LE(bitsPerSample, 34);
-  newHeader.write("data", 36);
-  newHeader.writeUInt32LE(durationBytes, 40);
-  const writeStream = fs.createWriteStream(targetPath);
-  writeStream.write(newHeader);
-  const readStream = fs.createReadStream(sourcePath, {
-    start: startByte,
-    end: startByte + durationBytes - 1
-  });
-  readStream.pipe(writeStream);
-  fs.closeSync(fd);
+  api.ui.registerContextMenuAction(
+    "AudioTrack.ArrangementSelection",
+    "Render Clips to Project",
+    "smartBatchExportAction"
+  );
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

@@ -1,5 +1,6 @@
 {
   "name": "smart-batch-exporter",
+  "version": "1.0.3",
   "type": "module",
   "main": "dist/extension.js",
   "scripts": {
@@ -11,8 +12,9 @@
   },
   "devDependencies": {
     "@ableton-extensions/cli": "file:../../ableton-extensions-cli-1.0.0-beta.0.tgz",
-    "esbuild": "0.28.0",
+    "@types/node": "^25.9.1",
+    "esbuild": "^0.20.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.3.3"
   }
 }
